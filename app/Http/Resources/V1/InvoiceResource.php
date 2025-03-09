@@ -22,8 +22,6 @@ class InvoiceResource extends JsonResource
             "status"=> $this->status,
             "billedDate"=> $this->billed_date,
             "paidDate"=> $this->paid_date,
-            "createdAt"=> $this->created_at,
-            "updatedAt"=> $this->updated_at,
         ];
 
         return $data;

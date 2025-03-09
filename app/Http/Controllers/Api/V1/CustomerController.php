@@ -10,6 +10,7 @@ use App\Http\Requests\V1\UpdateCustomerRequest;
 use App\Http\Resources\V1\CustomerCollection;
 use App\Filters\V1\CustomerFilters;
 use Illuminate\Http\Request;
+use Illuminate\Http\Response;
 
 class CustomerController extends Controller
 {
@@ -22,10 +23,20 @@ class CustomerController extends Controller
 
         $queryItems = $filter->transform($request);//[[column, operator, value], [column, operator, value]]
 
-        $customer = Customer::where($queryItems)->paginate();
+        $includeInvoices = $request->query('includeInvoices');
+
+
+        $customers = Customer::where($queryItems);
+        
+        if($includeInvoices == 'true'){
+            $customers =$customers->with('invoices');
+        }
+        
+
+        $customers= $customers->paginate()->appends($request->query());
 
         //* append method is necessary to filter usable in all pages
-        return new CustomerCollection($customer->appends($request->query()));
+        return new CustomerCollection($customers);
     
     }
 
@@ -34,7 +45,9 @@ class CustomerController extends Controller
      */
     public function store(StoreCustomerRequest $request)
     {
-        //
+        $customer = Customer::create($request->all());
+
+        return new CustomerResource($customer);
     }
 
     /**
@@ -42,8 +55,19 @@ class CustomerController extends Controller
      */
     public function show(Customer $customer)
     {
+        $includeInvoices = request()->query('includeInvoices');
+
+        if($includeInvoices == 'true'){
+
+            // $customer->load('invoices'); //This one is less efficient and pessimistic
+
+            //This one is more efficient and opetimistic than the above one
+            return new CustomerResource($customer->loadMissing('invoices'));
+        }
+
         return new CustomerResource($customer);
     }
+
 
 
     /**
@@ -51,7 +75,9 @@ class CustomerController extends Controller
      */
     public function update(UpdateCustomerRequest $request, Customer $customer)
     {
-        //
+        $customer->update($request->all());
+
+        return new CustomerResource($customer);
     }
 
     /**
@@ -59,6 +85,8 @@ class CustomerController extends Controller
      */
     public function destroy(Customer $customer)
     {
-        //
+        Customer::destroy($customer->id);
+
+        return response()->json(['message' => 'Customer deleted successfully'], Response::HTTP_OK);
     }
 }

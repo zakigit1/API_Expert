@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Api\V1;
 
 use App\Http\Controllers\Controller;
+use App\Http\Requests\V1\BulkStoreInvoiceRequest;
 use App\Http\Resources\V1\InvoiceCollection;
 use App\Http\Resources\V1\InvoiceResource;
 use App\Models\Invoice;
@@ -10,6 +11,7 @@ use App\Http\Requests\V1\StoreInvoiceRequest;
 use App\Http\Requests\V1\UpdateInvoiceRequest;
 use App\Filters\V1\InvoiceFilters;
 use Illuminate\Http\Request;
+use Illuminate\Support\Arr;
 
 class InvoiceController extends Controller
 {
@@ -20,7 +22,7 @@ class InvoiceController extends Controller
     {
         $filter = new InvoiceFilters();
 
-        $queryItems = $filter->transform($request);//[[column, operator, value], [column, operator, value]]
+        $queryItems = $filter->transform($request); //[[column, operator, value], [column, operator, value]]
 
         $customer = Invoice::where($queryItems)->paginate();
 
@@ -35,6 +37,20 @@ class InvoiceController extends Controller
     public function store(StoreInvoiceRequest $request)
     {
         //
+    }
+
+
+    public function bulkStore(BulkStoreInvoiceRequest $request)
+    {
+        $customColmuns = ['customerId', 'billedDate', 'paidDate'];
+
+        $bulk = collect($request->all())->map(function ($arr, $key) use ($customColmuns) {
+            return Arr::except($arr, ['customerId', 'billedDate', 'paidDate']);
+        });
+
+        Invoice::insert($bulk->toArray());
+
+        return response()->json(['message' => 'Invoices created successfully'], 201);
     }
 
     /**
